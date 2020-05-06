@@ -40,7 +40,7 @@ def myscore(update, context):
     for m in userscore:
         context.bot.send_message(chat_id=update.effective_chat.id, text="Your positivity score is: "+ str(m.get('score')))
 
-## finds the top 10 most postiive users
+## finds the top 10 most positive users
 def top10score(update, context):
     allscore = userscoredb.find({},sort=[("score", pymongo.DESCENDING)])
     UserList = ""
