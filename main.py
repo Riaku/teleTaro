@@ -28,6 +28,7 @@ messagesdb = database['messages']
 userscoredb = database['userscore']
 messages = messagesdb.find({})
 
+print('teletaro is running...')
 ###############################
 ##                           ##
 ##      static commands      ##
@@ -46,7 +47,7 @@ def top10score(update, context):
     UserList = ""
     x = 0
     for m in allscore:
-        UserList = UserList + str(m.get('name')) + " " + str(m.get('score')) + ", "
+        UserList = UserList + str(m.get('name')) + ": " + str(m.get('score')) + ", "
         x += 1
         if(x == 10):
             break
@@ -63,31 +64,34 @@ dispatcher.add_handler(top10score_handler)
 ##############
 
 ##record messages and scores
+
+##############
 def echo(update, context):
     print('Message from ' + str(update.message.from_user))
 
     words = update.message.text
-    score = 0
+    score = 0.0
     for w in words.split():
         ss = wn.synsets(w)
         if ss:
             tmp = wn.synsets(w)[0].pos()
             try:
                 breakdown = swn.senti_synset(w + '.' + tmp + '.01')
+                score = score + breakdown.pos_score() - breakdown.neg_score()
             except:
                 continue
         else:
             continue
-        score = score + breakdown.pos_score() - breakdown.neg_score()
+
     userscored = userscoredb.find({"name": update.message.from_user.username})
-    messagesdb.insert_one(
-        {"time": datetime.now(), "chat id": str(update.message.chat.id), "name": update.message.from_user.username, "message": update.message.text, "score" : score})
+    messagesdb.insert_one({"time": datetime.now(), "chat id": str(update.message.chat.id), "name": update.message.from_user.username, "message": update.message.text, "score" : score})
     if userscoredb.count_documents({"name": update.message.from_user.username}) == 0:
         userscoredb.insert_one({"name": update.message.from_user.username, "score": score})
         print('new record created for '+update.message.from_user.username)
         logfile.write('new record created for '+update.message.from_user.username)
     else:
         for m in userscored:
+            print(str(update.message.from_user.username) + " score updated to: "+ str(m.get('score') + score))
             userscoredb.replace_one({'_id': m.get('_id')}, {"name" : update.message.from_user.username, "score": m.get('score') + score}, upsert=False)
 
 from telegram.ext import MessageHandler, Filters
